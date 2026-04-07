@@ -26,7 +26,7 @@ const oAuth2Client = new google.auth.OAuth2(
   REDIRECT_URI
 );
 
-function renderPage(content, title = "AWUMC Email System") {
+function renderPage(content, title = 'AWUMC Email System') {
   return `
     <!DOCTYPE html>
     <html lang="en">
@@ -54,7 +54,7 @@ app.get('/', (req, res) => {
     `));
   }
 
-  res.send(renderPage(`
+  return res.send(renderPage(`
     <h1>AWUMC Email Creator</h1>
     <form action="/create-user" method="POST">
       <label>First Name</label>
@@ -77,6 +77,7 @@ app.get('/auth/google', (req, res) => {
     prompt: 'consent',
     scope: ['https://www.googleapis.com/auth/admin.directory.user']
   });
+
   res.redirect(url);
 });
 
@@ -89,12 +90,13 @@ app.get('/oauth2callback', async (req, res) => {
     req.session.tokens = tokens;
     res.redirect('/');
   } catch (err) {
-    console.log("OAuth callback error:", err.response?.data || err.message || err);
+    console.log('OAuth callback error:', err.response?.data || err.message || err);
+
     res.send(renderPage(`
       <h2>❌ Login Error</h2>
       <p class="success-text">There was a problem with Google login</p>
       <a class="btn-link back-link" href="/">Back</a>
-    `, "Login Error"));
+    `, 'Login Error'));
   }
 });
 
@@ -103,18 +105,6 @@ app.post('/create-user', async (req, res) => {
     return res.send(renderPage(`
       <h2>❌ Not logged in</h2>
       <p class="success-text">Please login with Google first</p>
-      <a class="btn-link back-link" href="/">Back</a>
-    `));
-  }
-
-  const firstName = req.body.firstName;
-  const lastName = req.body.lastName;
-  const password = req.body.password;
-
-  if (!firstName || !lastName || !password) {
-    return res.send(renderPage(`
-      <h2>❌ Missing fields</h2>
-      <p class="success-text">Please fill all fields</p>
       <a class="btn-link back-link" href="/">Back</a>
     `));
   }
@@ -161,16 +151,17 @@ app.post('/create-user', async (req, res) => {
         <p><b>Password:</b> ${password}</p>
       </div>
       <a class="btn-link back-link" href="/">Create another email</a>
-    `, "Email Created"));
+    `, 'Email Created'));
   } catch (error) {
     console.log(error.response?.data || error.message || error);
+
     res.send(renderPage(`
       <h2>❌ Error creating email</h2>
       <div class="result-box">
         <p>${JSON.stringify(error.response?.data || error.message || error, null, 2)}</p>
       </div>
       <a class="btn-link back-link" href="/">Back</a>
-    `, "Error"));
+    `, 'Error'));
   }
 });
 
