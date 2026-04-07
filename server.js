@@ -5,9 +5,10 @@ const bodyParser = require('body-parser');
 require('dotenv').config();
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static(__dirname));
 
 app.use(session({
   secret: 'secretkey',
@@ -25,31 +26,49 @@ const oAuth2Client = new google.auth.OAuth2(
   REDIRECT_URI
 );
 
+function renderPage(content, title = "AWUMC Email System") {
+  return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <title>${title}</title>
+      <link rel="stylesheet" href="/style.css" />
+    </head>
+    <body>
+      <div class="container">
+        ${content}
+      </div>
+    </body>
+    </html>
+  `;
+}
+
 app.get('/', (req, res) => {
   if (!req.session.tokens) {
-    return res.send(`
-      <h2>WUMC Email System</h2>
-      <a href="/auth/google">
-        <button>Login with Google</button>
-      </a>
-    `);
+    return res.send(renderPage(`
+      <h1>AWUMC Email Creator</h1>
+      <p class="success-text">Login first to create employee emails</p>
+      <a class="btn-link" href="/auth/google">Login with Google</a>
+    `));
   }
 
-  res.send(`
-    <h2>Create Employee Email</h2>
+  res.send(renderPage(`
+    <h1>AWUMC Email Creator</h1>
     <form action="/create-user" method="POST">
-      <label>First Name:</label><br>
-      <input type="text" name="firstName" required><br><br>
+      <label>First Name</label>
+      <input type="text" name="firstName" placeholder="First Name" required>
 
-      <label>Last Name:</label><br>
-      <input type="text" name="lastName" required><br><br>
+      <label>Last Name</label>
+      <input type="text" name="lastName" placeholder="Last Name" required>
 
-      <label>Password:</label><br>
-      <input type="password" name="password" required><br><br>
+      <label>Password</label>
+      <input type="password" name="password" placeholder="Strong Password" required>
 
       <button type="submit">Create Email</button>
     </form>
-  `);
+  `));
 });
 
 app.get('/auth/google', (req, res) => {
@@ -71,16 +90,21 @@ app.get('/oauth2callback', async (req, res) => {
     res.redirect('/');
   } catch (err) {
     console.log("OAuth callback error:", err.response?.data || err.message || err);
-    res.send(`
-      <h3>فيه مشكلة في تسجيل الدخول </h3>
-      <pre>${JSON.stringify(err.response?.data || err.message || err, null, 2)}</pre>
-    `);
+    res.send(renderPage(`
+      <h2>❌ Login Error</h2>
+      <p class="success-text">There was a problem with Google login</p>
+      <a class="btn-link back-link" href="/">Back</a>
+    `, "Login Error"));
   }
 });
 
 app.post('/create-user', async (req, res) => {
   if (!req.session.tokens) {
-    return res.send("سجلي دخول بقوقل أول");
+    return res.send(renderPage(`
+      <h2>❌ Not logged in</h2>
+      <p class="success-text">Please login with Google first</p>
+      <a class="btn-link back-link" href="/">Back</a>
+    `));
   }
 
   const firstName = req.body.firstName;
@@ -88,7 +112,11 @@ app.post('/create-user', async (req, res) => {
   const password = req.body.password;
 
   if (!firstName || !lastName || !password) {
-    return res.send("Please fill all fields");
+    return res.send(renderPage(`
+      <h2>❌ Missing fields</h2>
+      <p class="success-text">Please fill all fields</p>
+      <a class="btn-link back-link" href="/">Back</a>
+    `));
   }
 
   const cleanFirst = firstName.trim().toLowerCase();
@@ -114,21 +142,26 @@ app.post('/create-user', async (req, res) => {
       }
     });
 
-    res.send(`
-      <h2>Email created successfully</h2>
-      <p><b>Email:</b> ${email}</p>
-      <p><b>Password:</b> ${password}</p>
-      <br><a href="/">⬅️ Back</a>
-    `);
+    res.send(renderPage(`
+      <h2>✅ Email created successfully</h2>
+      <div class="result-box">
+        <p><b>Email:</b> ${email}</p>
+        <p><b>Password:</b> ${password}</p>
+      </div>
+      <a class="btn-link back-link" href="/">Create another email</a>
+    `, "Email Created"));
   } catch (error) {
-    console.log(error.response?.data || error.message);
-    res.send(`
-      <h3>صار خطأ أثناء إنشاء الإيميل ❌</h3>
-      <pre>${JSON.stringify(error.response?.data || error.message || error, null, 2)}</pre>
-    `);
+    console.log(error.response?.data || error.message || error);
+    res.send(renderPage(`
+      <h2>❌ Error creating email</h2>
+      <div class="result-box">
+        <p>${JSON.stringify(error.response?.data || error.message || error, null, 2)}</p>
+      </div>
+      <a class="btn-link back-link" href="/">Back</a>
+    `, "Error"));
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
