@@ -119,6 +119,18 @@ app.post('/create-user', async (req, res) => {
     `));
   }
 
+  const firstName = req.body.firstName;
+  const lastName = req.body.lastName;
+  const password = req.body.password;
+
+  if (!firstName || !lastName || !password) {
+    return res.send(renderPage(`
+      <h2>❌ Missing fields</h2>
+      <p class="success-text">Please fill all fields</p>
+      <a class="btn-link back-link" href="/">Back</a>
+    `));
+  }
+
   const cleanFirst = firstName.trim().toLowerCase();
   const cleanLast = lastName.trim().toLowerCase();
   const email = `${cleanFirst}.${cleanLast}@awumc.com`;
